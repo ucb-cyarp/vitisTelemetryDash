@@ -3,6 +3,29 @@ import dash
 import dash_core_components as dcc
 import dash_daq as daq
 import dash_html_components as html
+import argparse
+import json
+
+#Parse CLI Arguments for Config File Location
+# parser = argparse.ArgumentParser(description='Start vitis telemetry dashboard')
+# parser.add_argument('config', type=str, required=True, help='Path to the telemetry configuration json file')
+# parser.parse_args()
+
+#Load the Config Json file.
+#This file contains information about the application incuding
+#   * Name
+#   * IO Thread Telemetry File Location (if applicable)
+#   * Compute Thread Telemetry File Locations
+#   * Column Label of Compute Time Metric
+#   * Column Lable of Total Time Metric
+#   * Partition To CPU Number Mapping
+#   * Generation Report Files (if applicable)
+#        - Schedule GraphML file (if applicable)
+#        - Communication Report
+#        - Computation Report
+#   
+
+#For the telemetry files, we read them line by line
 
 external_stylesheets = ['vitisTelemetry.css']
 app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
