@@ -79,7 +79,11 @@
 /* History Style
 –––––––––––––––––––––––––––––––––––––––––––––––––– */
 .history-container {
-  width: 90%;
+  width: 100%;
+  border-style: solid;
+  border-width: thin;
+  padding: 10px;
+  margin: 0 auto;
 }
 
 /* Below 400 px, the whole width of the screen is taken by the container */
