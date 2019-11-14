@@ -58,7 +58,7 @@
     width: 80%; }
 }
 
-/* Gauge Style
+/* Radial Gauge Style
 –––––––––––––––––––––––––––––––––––––––––––––––––– */
 
 .gauge-container {
@@ -74,6 +74,36 @@
   height: 350px;
   margin: 0;
   padding: 25px;
+}
+
+/* Bar Gauge Style
+–––––––––––––––––––––––––––––––––––––––––––––––––– */
+.bar-collection-container {
+  display: flex;
+  flex-wrap: wrap;
+  flex-direction: row;
+  justify-content: space-between;
+}
+
+.bar-container{
+  display: flex;
+  flex: initial;
+  flex-wrap: wrap; /*Do not wrap lables*/
+  flex-direction: row;
+  justify-content: space-between;
+  flex-basis: 500px;
+}
+
+.bar-label{
+  flex: initial;
+  text-align: left;
+  flex-basis: 200px;
+  vertical-align: middle;
+}
+
+.bar-actual{
+  flex: initial;
+  flex-basis: 300px;
 }
 
 /* History Style

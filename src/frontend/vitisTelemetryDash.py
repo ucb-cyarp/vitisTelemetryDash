@@ -19,7 +19,7 @@ import json
 #   * IO Thread Telemetry File Location (if applicable)
 #   * Compute Thread Telemetry File Locations
 #   * Column Label of Compute Time Metric
-#   * Column Lable of Total Time Metric
+#   * Column Label of Total Time Metric
 #   * Partition To CPU Number Mapping
 #   * Generation Report Files (if applicable)
 #        - Schedule GraphML file (if applicable)
@@ -36,38 +36,63 @@ gauges = []
 gaugeDivs = []
 gaugeIDs = []
 gaugeCallbackOutputs = []
+gaugeContainer = None
 
-for i in range(0, 4):
-    # daq.GraduatedBar(
-    # color={"gradient":True,"ranges":{"green":[0,60],"yellow":[60,80],"red":[80,100]}},
-    # showCurrentValue=True,
-    # min=0,
-    # max=100,
-    # step=10,
-    # value=38)    
+radialStyle = False
+if radialStyle:
+    #Radial Style
+    for i in range(0, 31):
+        idName = 'gauge-part-' + str(i)
 
-    idName = 'gauge-part-' + str(i)
+        gauge = daq.Gauge(
+            id = idName,
+            color = {"gradient":True,"ranges":{"green":[0,60],"yellow":[60,80],"red":[80,100]}},
+            showCurrentValue = True,
+            units = "%",
+            value = 0,
+            label = 'Compute Partition ' + str(i),
+            max=100,
+            min=0,
+            size=175
+        ),
+        gauges.append(gauge)
 
-    gauge = daq.Gauge(
-        id = idName,
-        color = {"gradient":True,"ranges":{"green":[0,60],"yellow":[60,80],"red":[80,100]}},
-        showCurrentValue = True,
-        units = "%",
-        value = 0,
-        label = 'Compute Partition ' + str(i),
-        max=100,
-        min=0,
-        size=175
-    ),
-    gauges.append(gauge)
+        gaugeDiv = html.Div(className = "guage-content", children = gauge)
+        gaugeDivs.append(gaugeDiv)
 
-    gaugeDiv = html.Div(className = "guage-content", children = gauge)
-    gaugeDivs.append(gaugeDiv)
+        gaugeIDs.append(idName)
 
-    gaugeIDs.append(idName)
+        gaugeCallbackOutputs.append(Output(idName, 'value'))
 
-    gaugeCallbackOutputs.append(Output(idName, 'value'))
+        gaugeContainer = html.Div(className = 'bar-collection-container', children = gaugeDivs)
 
+else:
+    #Bar Style
+    for i in range(0, 31):
+        idName = 'gauge-part-' + str(i)
+
+        gauge = daq.GraduatedBar(
+            id = idName,
+            color={"gradient":True,"ranges":{"green":[0,60],"yellow":[60,80],"red":[80,100]}},
+            showCurrentValue=True,
+            min=0,
+            max=100,
+            step=1,
+            value=0)    
+
+        gauges.append(gauge)
+
+        gaugeDiv = html.Div(className = 'bar-container', children = [
+            html.Div(className = "bar-label", children = 'Compute Partition ' + str(i) + ": "),
+            html.Div(className = "bar-actual", children = gauge)
+        ])
+        gaugeDivs.append(gaugeDiv)
+
+        gaugeIDs.append(idName)
+
+        gaugeCallbackOutputs.append(Output(idName, 'value'))
+
+        gaugeContainer = html.Div(className = 'gauge-container', children = gaugeDivs)
 
 app.layout = html.Div(children=[
     #Page Intro Container
@@ -80,7 +105,7 @@ app.layout = html.Div(children=[
     #Live Gauges Container 
     html.Div(className = 'container', children = [
         html.H2(children = 'Live Utilization:', id = 'live-util'),
-        html.Div(className = 'gauge-container', children = gaugeDivs)
+        gaugeContainer
     ]),
 
 
@@ -106,7 +131,7 @@ app.layout = html.Div(children=[
     html.Div(style={'display': 'none'}, children = [
         dcc.Interval(
             id='interval-component',
-            interval=10*1000, # in milliseconds
+            interval=2000, # in milliseconds
             n_intervals=0
         )
     ]),
@@ -163,7 +188,7 @@ def interval_update(intervals, refresh_ind):
             margin={'l': 40, 'b': 40, 't': 10, 'r': 10},
             legend={'x': 0, 'y': 1},
             hovermode='closest',
-            transition = {'duration': 500}
+            #transition = {'duration': 500}
         )
     }
 
@@ -171,4 +196,4 @@ def interval_update(intervals, refresh_ind):
     return tuple(rtnList) + tuple([new_fig]) + tuple([str(new_ind)]) #Array in tuple required to prevent string or dict from being broken apart
 
 if __name__ == '__main__':
-    app.run_server(debug=True)
+    app.run_server(debug=True, host='172.16.248.148')
