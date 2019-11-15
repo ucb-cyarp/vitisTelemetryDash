@@ -94,7 +94,7 @@ app.layout = html.Div(children=[
         html.Div(className = 'history-container', children = [
             dcc.Graph(
                 id='hist-plot',
-                animate = True,
+                # animate = True,
                 config={
                     'showSendToCloud': False,
                 }
