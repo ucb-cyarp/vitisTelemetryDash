@@ -128,7 +128,7 @@ app.layout = html.Div(children=[
     html.Div(style={'display': 'none'}, children = [
         dcc.Interval(
             id='interval-component',
-            interval=10000, # in milliseconds
+            interval=1000, # in milliseconds
             n_intervals=0
         )
     ]),
@@ -159,7 +159,7 @@ def interval_update(intervals, refresh_ind):
 
     #History Updates
     #Using Example from https://dash.plot.ly/getting-started-part-2
-    timeRangeSec = 10
+    timeRangeSec = 120
 
     history_traces = []
     first = True
@@ -212,4 +212,4 @@ def interval_update(intervals, refresh_ind):
     return tuple(gaugeCurrentVals) + tuple([new_fig]) + tuple([str(new_ind)]) #Array in tuple required to prevent string or dict from being broken apart
 
 if __name__ == '__main__':
-    app.run_server(debug=True, host='172.16.248.148')
+    app.run_server(debug=False, host='128.32.62.244')
