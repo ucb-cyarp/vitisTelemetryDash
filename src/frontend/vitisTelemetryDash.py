@@ -43,7 +43,7 @@ if radialStyle:
 
         gauge = daq.Gauge(
             id = idName,
-            color = {"gradient":True,"ranges":{"green":[0,60],"yellow":[60,80],"red":[80,100]}},
+            #color = {"gradient":True,"ranges":{"green":[0,60],"yellow":[60,80],"red":[80,100]}},
             showCurrentValue = True,
             units = "%",
             value = 0,
@@ -70,7 +70,7 @@ else:
 
         gauge = daq.GraduatedBar(
             id = idName,
-            color={"gradient":True,"ranges":{"green":[0,60],"yellow":[60,80],"red":[80,100]}},
+            # color={"gradient":True,"ranges":{"green":[0,60],"yellow":[60,80],"red":[80,100]}},
             showCurrentValue=True,
             min=0,
             max=100,
@@ -95,8 +95,8 @@ app.layout = html.Div(children=[
     #Page Intro Container
     html.Div(className = 'container', children = [
         html.H1(children='Vitis Application Telemetry Dashboard'),
-        html.P('''This dashboard presents telemetry data refreshed every 1 sec from a Vitis application.  
-        Telemetry must be enabled and set to dump to files for this dashboard to function.''')
+        html.P(['''This dashboard presents telemetry data refreshed every ''', html.Span(id = 'refresh-lbl', children = '1'), ''' sec from a Vitis application.  
+        Telemetry must be enabled and set to dump to files for this dashboard to function.'''])
     ]),
 
     #Live Gauges Container 
@@ -120,6 +120,35 @@ app.layout = html.Div(children=[
         ])
     ]),
 
+    html.Div( className = 'container', children = [
+        html.H3(children = 'Controls:'),
+        html.Div( className  = 'control-container', children = [
+            html.Div( className  = 'control-content', children = [
+                html.Button('Stop', id='startstop-btn')
+            ]),
+            html.Div( className  = 'control-content', children = [
+                daq.NumericInput(
+                    id='refresh-period-input',
+                    max=100,
+                    value=1,
+                    min=1,
+                    label='Refresh Period (s)',
+                    labelPosition='bottom'
+                )  
+            ]),
+            html.Div( className  = 'control-content', children = [
+                daq.NumericInput(
+                    id='hist-input',
+                    max=10000,
+                    value=120,
+                    min=1,
+                    label='History (s)',
+                    labelPosition='bottom'
+                )  
+            ])
+        ])
+    ]),
+
     html.Div( className = 'container footer', children = [
         html.P(children = ['Developed using ', html.A('Plotly Dash', href='https://plot.ly/dash')])
     ]),
@@ -133,17 +162,44 @@ app.layout = html.Div(children=[
         )
     ]),
 
-    html.Div('0', style={'display': 'none'}, id='refresh-ind')
+    html.Div('0', style={'display': 'none'}, id='refresh-ind'),
+    html.Div('False', style={'display': 'none'}, id='enabled'), #Set default to false.  When refesh occurs, the button callback is called automaticall and will enable
 
 ])
 
 #Callbacks
+#Start/Stop Button
+@app.callback([Output('interval-component', 'disabled'), Output('startstop-btn', 'children'), Output('enabled', 'children')],
+              [Input('startstop-btn', 'n_clicks')],
+              [State('enabled', 'children')])
+def start_stop_update(n_clicks, enabled):
+    currentlyEnabled = (enabled == 'True')
+    currentlyEnabled = not currentlyEnabled
+    btn_lbl = ''
+    new_val = ''
+    if currentlyEnabled:
+        btn_lbl = 'Stop'
+        new_val = 'True'
+    else:
+        btn_lbl = 'Start'
+        new_val = 'False'
+    return (not currentlyEnabled, btn_lbl, new_val)
+
+#Update rate
+@app.callback([Output('interval-component', 'interval'), Output('refresh-lbl', 'children')],
+              [Input('refresh-period-input', 'value')],
+              [])
+def interval_update(interval_str):
+    interval = int(interval_str)
+    return (interval*1000, str(interval))
+
 #Update the elements
 @app.callback(gaugeCallbackOutputs+[Output('hist-plot', 'figure'), Output('refresh-ind', 'children')],
               [Input('interval-component', 'n_intervals')],
-              [State('refresh-ind', 'children')])
-def interval_update(intervals, refresh_ind):
+              [State('refresh-ind', 'children'), State('hist-input', 'value')])
+def data_update(intervals, refresh_ind, hist_window_str):
     current_ind = int(refresh_ind)
+    hist_window = int(hist_window_str)
 
     proxy_ind = proxy.getItter()
 
@@ -159,7 +215,7 @@ def interval_update(intervals, refresh_ind):
 
     #History Updates
     #Using Example from https://dash.plot.ly/getting-started-part-2
-    timeRangeSec = 120
+    timeRangeSec = hist_window
 
     history_traces = []
     first = True
@@ -212,4 +268,4 @@ def interval_update(intervals, refresh_ind):
     return tuple(gaugeCurrentVals) + tuple([new_fig]) + tuple([str(new_ind)]) #Array in tuple required to prevent string or dict from being broken apart
 
 if __name__ == '__main__':
-    app.run_server(debug=False, host='128.32.62.244')
+    app.run_server(debug=True, host='128.32.62.244')

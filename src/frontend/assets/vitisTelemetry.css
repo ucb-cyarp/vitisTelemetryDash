@@ -106,6 +106,20 @@
   flex-basis: 300px;
 }
 
+/* Controls Style
+–––––––––––––––––––––––––––––––––––––––––––––––––– */
+.control-container {
+  display: flex;
+  flex-wrap: wrap;
+  flex-direction: row;
+  justify-content: left;
+}
+
+.control-content{
+  flex: initial;
+  margin: 25px;
+}
+
 /* History Style
 –––––––––––––––––––––––––––––––––––––––––––––––––– */
 .history-container {
