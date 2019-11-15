@@ -5,8 +5,24 @@ import dash_core_components as dcc
 import dash_daq as daq
 import dash_html_components as html
 from dash.dependencies import Input, Output, State
+from dash.exceptions import PreventUpdate
 import plotly.graph_objs as go
 import argparse
+import xmlrpc.client
+import time
+
+#Attempt to connect to RPC server
+#Do not continue until connection is successful
+rpcURL = 'http://localhost:8090/'
+
+connected = False
+proxy = None
+while not connected:
+    try:
+        proxy = xmlrpc.client.ServerProxy(rpcURL)
+        connected = True
+    except xmlrpc.client.ProtocolError as error:
+        time.sleep(1) #Retry in a second
 
 external_stylesheets = ['vitisTelemetry.css']
 app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
@@ -17,10 +33,13 @@ gaugeIDs = []
 gaugeCallbackOutputs = []
 gaugeContainer = None
 
+#Get the compute partitions
+computePartitions = proxy.getPartitions()
+
 radialStyle = False
 if radialStyle:
     #Radial Style
-    for i in range(0, 31):
+    for i in computePartitions:
         idName = 'gauge-part-' + str(i)
 
         gauge = daq.Gauge(
@@ -47,7 +66,7 @@ if radialStyle:
 
 else:
     #Bar Style
-    for i in range(0, 31):
+    for i in computePartitions:
         idName = 'gauge-part-' + str(i)
 
         gauge = daq.GraduatedBar(
@@ -126,23 +145,40 @@ app.layout = html.Div(children=[
               [State('refresh-ind', 'children')])
 def interval_update(intervals, refresh_ind):
     current_ind = int(refresh_ind)
-    new_ind = (current_ind+5)%101
+
+    proxy_ind = proxy.getItter()
+
+    if proxy_ind == current_ind:
+        #The is no new data from the backend, do not update
+        raise PreventUpdate
+
+    new_ind = proxy_ind
 
     #Gauge Updates
-    rtnList = []
-    for i in range(0, len(gaugeCallbackOutputs)):
-        rtnList.append((new_ind+i)%101)
+    gaugeCurrentVals = proxy.getComputeTimePercent(new_ind)
 
     #History Updates
     #Using Example from https://dash.plot.ly/getting-started-part-2
-    numPts = 10
-    x = list(range(0, numPts))
+    timeRangeSec = 10
+
     history_traces = []
-    for i in range(0, len(gaugeCallbackOutputs)):
-        initVal = (new_ind+i)%101
-        y = []
-        for j in range(0, numPts):
-            y.append(x[j]+initVal)
+    first = True
+    minX = 0
+    maxX = 0
+    for i in computePartitions:
+        hist = proxy.getComputeTimePercentHistory(i, new_ind, timeRangeSec)
+        x = hist.time
+        y = hist.percent
+
+        if first:
+            minX = x[0]
+            maxX = x[len(x)-1]
+            first = False
+        else:
+            if x[0] < minX:
+                minX = x[0]
+            if x[len(x)-1] > maxX:
+                maxX = x[len(x)-1]
 
         txt = 'Compute Partition ' + str(i)
         history_traces.append(go.Scatter(
@@ -162,8 +198,9 @@ def interval_update(intervals, refresh_ind):
         'data': history_traces,
         'layout': dict(
             xaxis={'type': 'linear', 'title': 'Time',
-                   'range':[x[0], x[numPts-1]]},
-            yaxis={'title': 'CPU Utilization', 'range': [0, 100]},
+                   'range':[minX, maxX]},
+            yaxis={'title': 'CPU Utilization'},
+            # yaxis={'title': 'CPU Utilization', 'range': [0, 100]},
             margin={'l': 40, 'b': 40, 't': 10, 'r': 10},
             legend={'x': 0, 'y': 1},
             hovermode='closest',
@@ -172,7 +209,7 @@ def interval_update(intervals, refresh_ind):
     }
 
     #Return everything
-    return tuple(rtnList) + tuple([new_fig]) + tuple([str(new_ind)]) #Array in tuple required to prevent string or dict from being broken apart
+    return tuple(gaugeCurrentVals) + tuple([new_fig]) + tuple([str(new_ind)]) #Array in tuple required to prevent string or dict from being broken apart
 
 if __name__ == '__main__':
-    app.run_server(debug=True, host='172.16.248.148')
+    app.run_server(debug=False, host='172.16.248.148')
