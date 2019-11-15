@@ -155,7 +155,7 @@ def interval_update(intervals, refresh_ind):
 
     #Gauge Updates
     gaugeCurrentVals = proxy.getComputeTimePercent(new_ind)
-    print('GuageCurrentVals:' + str(gaugeCurrentVals))
+    # print('GuageCurrentVals:' + str(gaugeCurrentVals))
 
     #History Updates
     #Using Example from https://dash.plot.ly/getting-started-part-2

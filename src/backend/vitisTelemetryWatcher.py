@@ -60,6 +60,8 @@ def getComputeTimePercentHistory(partitionInd, itter, timeRangeSec):
     endTime = history[partitionInd].time[endInd]
 
     tgtStartTime = endTime - timeRangeSec
+
+    # print('Tgt Start Time: ' + str(tgtStartTime) + ' End time: ' + str(endTime))
     
     #Find the start of the interval
     startInd = endInd-1
@@ -69,7 +71,7 @@ def getComputeTimePercentHistory(partitionInd, itter, timeRangeSec):
             #Reached the beginning of the history before finding the beginning of the time range we were interested in
             startInd = 0
             foundEnd = True
-        elif history[partitionInd].time[endInd] > tgtStartTime:
+        elif history[partitionInd].time[startInd] > tgtStartTime:
             #Still looking
             startInd = startInd - 1
         else:
@@ -146,7 +148,7 @@ def watchTelem():
                         if totalTime != 0:#handle the startup case
                             percentCompute = computeTime / totalTime * 100
 
-                        print(str(i) + ' | Timestamp: ' + str(timestamp) + ' Percent Compute: ' + str(percentCompute) + ' Compute Time: ' + str(computeTime) + ', Total Time: ' + str(totalTime))
+                        # print(str(i) + ' | Timestamp: ' + str(timestamp) + ' Percent Compute: ' + str(percentCompute) + ' Compute Time: ' + str(computeTime) + ', Total Time: ' + str(totalTime))
 
                         history[i].computePercent.append(percentCompute)
                         history[i].time.append(timestamp)
