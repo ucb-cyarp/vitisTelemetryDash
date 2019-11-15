@@ -1,3 +1,4 @@
+#!/usr/bin/python3
 # -*- coding: utf-8 -*-
 import dash
 import dash_core_components as dcc
@@ -6,28 +7,6 @@ import dash_html_components as html
 from dash.dependencies import Input, Output, State
 import plotly.graph_objs as go
 import argparse
-import json
-
-#Parse CLI Arguments for Config File Location
-# parser = argparse.ArgumentParser(description='Start vitis telemetry dashboard')
-# parser.add_argument('config', type=str, required=True, help='Path to the telemetry configuration json file')
-# parser.parse_args()
-
-#Load the Config Json file.
-#This file contains information about the application incuding
-#   * Name
-#   * IO Thread Telemetry File Location (if applicable)
-#   * Compute Thread Telemetry File Locations
-#   * Column Label of Compute Time Metric
-#   * Column Label of Total Time Metric
-#   * Partition To CPU Number Mapping
-#   * Generation Report Files (if applicable)
-#        - Schedule GraphML file (if applicable)
-#        - Communication Report
-#        - Computation Report
-#   
-
-#For the telemetry files, we read them line by line
 
 external_stylesheets = ['vitisTelemetry.css']
 app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
@@ -157,7 +136,7 @@ def interval_update(intervals, refresh_ind):
     #History Updates
     #Using Example from https://dash.plot.ly/getting-started-part-2
     numPts = 10
-    x = range(0, numPts)
+    x = list(range(0, numPts))
     history_traces = []
     for i in range(0, len(gaugeCallbackOutputs)):
         initVal = (new_ind+i)%101
