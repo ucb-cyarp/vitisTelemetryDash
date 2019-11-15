@@ -7,7 +7,6 @@ import dash_html_components as html
 from dash.dependencies import Input, Output, State
 from dash.exceptions import PreventUpdate
 import plotly.graph_objs as go
-import argparse
 import xmlrpc.client
 import time
 
@@ -129,7 +128,7 @@ app.layout = html.Div(children=[
     html.Div(style={'display': 'none'}, children = [
         dcc.Interval(
             id='interval-component',
-            interval=2000, # in milliseconds
+            interval=10000, # in milliseconds
             n_intervals=0
         )
     ]),
@@ -156,6 +155,7 @@ def interval_update(intervals, refresh_ind):
 
     #Gauge Updates
     gaugeCurrentVals = proxy.getComputeTimePercent(new_ind)
+    print('GuageCurrentVals:' + str(gaugeCurrentVals))
 
     #History Updates
     #Using Example from https://dash.plot.ly/getting-started-part-2
@@ -165,10 +165,10 @@ def interval_update(intervals, refresh_ind):
     first = True
     minX = 0
     maxX = 0
-    for i in computePartitions:
+    for i in range(0, len(computePartitions)):
         hist = proxy.getComputeTimePercentHistory(i, new_ind, timeRangeSec)
-        x = hist.time
-        y = hist.percent
+        x = hist['time']
+        y = hist['percent']
 
         if first:
             minX = x[0]
@@ -180,7 +180,7 @@ def interval_update(intervals, refresh_ind):
             if x[len(x)-1] > maxX:
                 maxX = x[len(x)-1]
 
-        txt = 'Compute Partition ' + str(i)
+        txt = 'Compute Partition ' + str(computePartitions[i])
         history_traces.append(go.Scatter(
                 x=x,
                 y=y,
@@ -212,4 +212,4 @@ def interval_update(intervals, refresh_ind):
     return tuple(gaugeCurrentVals) + tuple([new_fig]) + tuple([str(new_ind)]) #Array in tuple required to prevent string or dict from being broken apart
 
 if __name__ == '__main__':
-    app.run_server(debug=False, host='172.16.248.148')
+    app.run_server(debug=True, host='172.16.248.148')

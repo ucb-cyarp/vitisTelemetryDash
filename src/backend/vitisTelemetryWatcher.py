@@ -5,7 +5,6 @@ import json
 from xmlrpc.server import SimpleXMLRPCServer
 import threading
 import time
-import os
 
 currentItter = 0
 partitions = []
@@ -19,6 +18,7 @@ computeTimeMetricName = ''
 totalTimeMetricName = ''
 timestampSecName = ''
 timestampNSecName = ''
+telemPath = ''
 
 class History:
     def __init__(self):
@@ -46,17 +46,17 @@ def getComputeTimePercent(itter):
 
     updatingLock.acquire()
 
-    for i in range(0, partitions):
-        ind = itterToIndex[i]
+    for i in range(0, len(partitions)):
+        ind = itterToIndex[i][itter]
         vals.append(history[i].computePercent[ind])
 
     updatingLock.release()
     return vals
 
-def getComputeTimePercentHistory(partitionInd, new_ind, timeRangeSec):
+def getComputeTimePercentHistory(partitionInd, itter, timeRangeSec):
     updatingLock.acquire()
 
-    endInd = itterToIndex[partitionInd]
+    endInd = itterToIndex[partitionInd][itter]
     endTime = history[partitionInd].time[endInd]
 
     tgtStartTime = endTime - timeRangeSec
@@ -89,6 +89,8 @@ def getComputeTimePercentHistory(partitionInd, new_ind, timeRangeSec):
     return hist
 
 def watchTelem():
+    global currentItter
+
     #Open files
     fileHandles = []
     firstLine = []
@@ -100,11 +102,12 @@ def watchTelem():
 
     for i in range(0, len(partitions)):
         try:
-            telemFileHandle = os.open(telemFiles[i], os.O_RDONLY)
+            telemFileHandle = open(telemPath + '/' + telemFiles[i])
             fileHandles.append(telemFileHandle)
         except Exception as err:
-            print('Error encountered when reading telem file: ' + telemFiles[i])
+            print('Error encountered when reading telem file: ' + telemPath + '/' + telemFiles[i])
             print(err)
+            exit(1)
         firstLine.append(True)
         computeTimeMetricInd.append(0)
         totalTimeMetricInd.append(0)
@@ -113,8 +116,8 @@ def watchTelem():
 
 
     while True:
+        changed = False
         updatingLock.acquire()
-
         for i in range(0, len(partitions)):
             reading = True
             while reading:
@@ -124,21 +127,37 @@ def watchTelem():
                     if firstLine[i]:
                         #this is the first line in the telemetry file
                         for token in range(0, len(tokenized)):
-                            if tokenized[token] == computeTimeMetricName:
+                            tokenStr = tokenized[token].strip()
+                            if tokenStr == computeTimeMetricName:
                                 computeTimeMetricInd[i] = token
-                            elif tokenized[token] == totalTimeMetricName:
+                            elif tokenStr == totalTimeMetricName:
                                 totalTimeMetricInd[i] = token
-                            elif tokenized[token] == timestampSecName:
+                            elif tokenStr == timestampSecName:
                                 timestampSecInd[i] = token
-                            elif tokenized[token] == timestampNSecName:
+                            elif tokenStr == timestampNSecName:
                                 timestampNSecInd[i] = token
                         firstLine[i] = False
                     else:
-                        timestamp = int(tokenized[timestampSecInd[i]]) + int(tokenized[timestampNSecInd[i]]) * 1e-9
-                        percentCompute = float(tokenized[computeTimeMetricInd[i]]) / float(tokenized[totalTimeMetricInd[i]]) * 100
-                        history[i].computePercent = percentCompute
-                        history[i].time = timestamp
+                        changed = True
+                        timestamp = int(tokenized[timestampSecInd[i]].strip()) + int(tokenized[timestampNSecInd[i]].strip()) * 1e-9
+                        computeTime = float(tokenized[computeTimeMetricInd[i]].strip()) 
+                        totalTime = float(tokenized[totalTimeMetricInd[i]].strip())
+                        percentCompute = 0
+                        if totalTime != 0:#handle the startup case
+                            percentCompute = computeTime / totalTime * 100
 
+                        print(str(i) + ' | Timestamp: ' + str(timestamp) + ' Percent Compute: ' + str(percentCompute) + ' Compute Time: ' + str(computeTime) + ', Total Time: ' + str(totalTime))
+
+                        history[i].computePercent.append(percentCompute)
+                        history[i].time.append(timestamp)
+                else:
+                    reading = False
+
+        if changed:
+            print('Changed!')
+            currentItter = currentItter+1
+            for i in range(0, len(partitions)):
+                itterToIndex[i].append(len(history[i].time)-1)
 
         updatingLock.release()
         time.sleep(period/1000)
@@ -149,9 +168,11 @@ def setup():
 
     #Parse CLI Arguments for Config File Location
     parser = argparse.ArgumentParser(description='Start vitis telemetry dashboard')
-    parser.add_argument('config', type=str, required=True, help='Path to the telemetry configuration JSON file')
-    parser.add_argument('telem-path', type=str, required=True, help='Path to the telemetry files referenced in the configuration JSON file')
+    parser.add_argument('--config', type=str, required=True, help='Path to the telemetry configuration JSON file')
+    parser.add_argument('--telem-path', type=str, required=True, help='Path to the telemetry files referenced in the configuration JSON file')
     args = parser.parse_args()
+
+    print(args)
 
     #Load the Config Json file.
     #This file contains information about the application incuding
@@ -167,9 +188,12 @@ def setup():
     #        - Computation Report
     #   
 
+    global telemPath
+    telemPath = args.telem_path
+
     configFile = None
     try:
-        configFile = os.open(args['config'], os.O_RDONLY)
+        configFile = open(args.config)
     except Exception as err:
         print('Error encountered when reading config file')
         print(err)
@@ -180,14 +204,22 @@ def setup():
     configFile.close()
 
     #Get an array of compute threads
-    for computePartStr, telemFileLoc in telemConfig["partitionToCPU"].items(): #https://stackoverflow.com/questions/3294889/iterating-over-dictionaries-using-for-loops
+    for computePartStr, telemFileLoc in telemConfig["computeTelemFiles"].items(): #https://stackoverflow.com/questions/3294889/iterating-over-dictionaries-using-for-loops
         partitions.append(int(computePartStr))
         telemFiles.append(telemFileLoc)
 
         #Create a history object for each compute thread
         history.append(History())
 
+        itterToIndex.append([0]) #this is a dummy entry
+
+    print(telemFiles)
+
     #Get headers
+    global computeTimeMetricName
+    global totalTimeMetricName
+    global timestampSecName
+    global timestampNSecName
     computeTimeMetricName = telemConfig['computeTimeMetricName']
     totalTimeMetricName = telemConfig['totalTimeMetricName']
     timestampSecName = telemConfig['timestampSecName']
