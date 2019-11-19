@@ -32,6 +32,9 @@ gaugeIDs = []
 gaugeCallbackOutputs = []
 gaugeContainer = None
 
+#Get the design name
+designName = proxy.getDesignName()
+
 #Get the compute partitions
 computePartitions = proxy.getPartitions()
 
@@ -94,7 +97,7 @@ else:
 app.layout = html.Div(children=[
     #Page Intro Container
     html.Div(className = 'container', children = [
-        html.H1(children='Vitis Application Telemetry Dashboard'),
+        html.H1(children=[ 'Vitis Application Telemetry Dashboard: ', html.Span(id = 'designName', children = designName) ]),
         html.P(['''This dashboard presents telemetry data refreshed every ''', html.Span(id = 'refresh-lbl', children = '1'), ''' sec from a Vitis application.  
         Telemetry must be enabled and set to dump to files for this dashboard to function.'''])
     ]),
@@ -106,12 +109,26 @@ app.layout = html.Div(children=[
     ]),
 
 
-    #History Plot Container
+    #History Util Plot Container
     html.Div(className = 'container', children = [
         html.H2(children = 'Historical Utilization:', id = 'hist-util'),
         html.Div(className = 'history-container', children = [
             dcc.Graph(
                 id='hist-plot',
+                # animate = True,
+                config={
+                    'showSendToCloud': False,
+                }
+            )
+        ])
+    ]),
+
+    #History Throughput Plot Container
+    html.Div(className = 'container', children = [
+        html.H2(children = 'Historical Throughput:', id = 'hist-throughput'),
+        html.Div(className = 'history-container', children = [
+            dcc.Graph(
+                id='hist-rate-plot',
                 # animate = True,
                 config={
                     'showSendToCloud': False,
@@ -194,7 +211,7 @@ def interval_update(interval_str):
     return (interval*1000, str(interval))
 
 #Update the elements
-@app.callback(gaugeCallbackOutputs+[Output('hist-plot', 'figure'), Output('refresh-ind', 'children')],
+@app.callback(gaugeCallbackOutputs+[Output('hist-plot', 'figure'), Output('hist-rate-plot', 'figure'), Output('refresh-ind', 'children')],
               [Input('interval-component', 'n_intervals')],
               [State('refresh-ind', 'children'), State('hist-input', 'value')])
 def data_update(intervals, refresh_ind, hist_window_str):
@@ -217,14 +234,16 @@ def data_update(intervals, refresh_ind, hist_window_str):
     #Using Example from https://dash.plot.ly/getting-started-part-2
     timeRangeSec = hist_window
 
-    history_traces = []
+    rate_history_traces = []
+    compute_percent_history_traces = []
     first = True
     minX = 0
     maxX = 0
     for i in range(0, len(computePartitions)):
-        hist = proxy.getComputeTimePercentHistory(i, new_ind, timeRangeSec)
+        hist = proxy.getHistory(i, new_ind, timeRangeSec)
         x = hist['time']
-        y = hist['percent']
+        y_percent = hist['percent']
+        y_rate = hist['rate']
 
         if first:
             minX = x[0]
@@ -237,9 +256,22 @@ def data_update(intervals, refresh_ind, hist_window_str):
                 maxX = x[len(x)-1]
 
         txt = 'Compute Partition ' + str(computePartitions[i])
-        history_traces.append(go.Scatter(
+        compute_percent_history_traces.append(go.Scatter(
                 x=x,
-                y=y,
+                y=y_percent,
+                #text=[], #This is the label for each point
+                mode='lines+markers',
+                opacity=0.7,
+                marker={
+                    'size': 15,
+                    'line': {'width': 0.5, 'color': 'white'}
+                },
+                name=txt
+            ))
+
+        rate_history_traces.append(go.Scatter(
+                x=x,
+                y=y_rate,
                 #text=[], #This is the label for each point
                 mode='lines+markers',
                 opacity=0.7,
@@ -250,8 +282,22 @@ def data_update(intervals, refresh_ind, hist_window_str):
                 name=txt
             ))
     
-    new_fig = {
-        'data': history_traces,
+    new_compute_percent_fig = {
+        'data': compute_percent_history_traces,
+        'layout': dict(
+            xaxis={'type': 'linear', 'title': 'Time',
+                   'range':[minX, maxX]},
+            yaxis={'title': 'CPU Utilization'},
+            # yaxis={'title': 'CPU Utilization', 'range': [0, 100]},
+            margin={'l': 40, 'b': 40, 't': 10, 'r': 10},
+            legend={'x': 0, 'y': 1},
+            hovermode='closest',
+            #transition = {'duration': 500}
+        )
+    }
+
+    new_rate_fig = {
+        'data': rate_history_traces,
         'layout': dict(
             xaxis={'type': 'linear', 'title': 'Time',
                    'range':[minX, maxX]},
@@ -265,7 +311,7 @@ def data_update(intervals, refresh_ind, hist_window_str):
     }
 
     #Return everything
-    return tuple(gaugeCurrentVals) + tuple([new_fig]) + tuple([str(new_ind)]) #Array in tuple required to prevent string or dict from being broken apart
+    return tuple(gaugeCurrentVals) + tuple([new_compute_percent_fig]) + tuple([new_rate_fig]) + tuple([str(new_ind)]) #Array in tuple required to prevent string or dict from being broken apart
 
 if __name__ == '__main__':
     app.run_server(debug=True, host='128.32.62.244')

@@ -18,17 +18,21 @@ computeTimeMetricName = ''
 totalTimeMetricName = ''
 timestampSecName = ''
 timestampNSecName = ''
+rateMSPSName = ''
 telemPath = ''
+designName = ''
 
 class History:
     def __init__(self):
         self.computePercent = []
         self.time = []
+        self.rate = []
 
 class RPCHistory:
     def __init__(self):
         self.percent = []
         self.time = []
+        self.rate = []
 
 
 def getPartitions():
@@ -53,7 +57,7 @@ def getComputeTimePercent(itter):
     updatingLock.release()
     return vals
 
-def getComputeTimePercentHistory(partitionInd, itter, timeRangeSec):
+def getHistory(partitionInd, itter, timeRangeSec):
     updatingLock.acquire()
 
     endInd = itterToIndex[partitionInd][itter]
@@ -82,13 +86,18 @@ def getComputeTimePercentHistory(partitionInd, itter, timeRangeSec):
     hist = RPCHistory()
     hist.percent = []
     hist.time = []
+    hist.rate = []
 
     for i in range(startInd, endInd+1):
         hist.percent.append(history[partitionInd].computePercent[i])
+        hist.rate.append(history[partitionInd].rate[i])
         hist.time.append(history[partitionInd].time[i])
 
     updatingLock.release()
     return hist
+
+def getDesignName():
+    return designName
 
 def watchTelem():
     global currentItter
@@ -101,6 +110,7 @@ def watchTelem():
     totalTimeMetricInd = []
     timestampSecInd = []
     timestampNSecInd = []
+    rateMSPSInd = []
 
     for i in range(0, len(partitions)):
         try:
@@ -115,7 +125,7 @@ def watchTelem():
         totalTimeMetricInd.append(0)
         timestampSecInd.append(0)
         timestampNSecInd.append(0)
-
+        rateMSPSInd.append(0)
 
     while True:
         changed = False
@@ -138,12 +148,15 @@ def watchTelem():
                                 timestampSecInd[i] = token
                             elif tokenStr == timestampNSecName:
                                 timestampNSecInd[i] = token
+                            elif tokenStr == rateMSPSName:
+                                rateMSPSInd[i] = token
                         firstLine[i] = False
                     else:
                         changed = True
                         timestamp = int(tokenized[timestampSecInd[i]].strip()) + int(tokenized[timestampNSecInd[i]].strip()) * 1e-9
                         computeTime = float(tokenized[computeTimeMetricInd[i]].strip()) 
                         totalTime = float(tokenized[totalTimeMetricInd[i]].strip())
+                        rateMSPS = float(tokenized[rateMSPSInd[i]].strip())
                         percentCompute = 0
                         if totalTime != 0:#handle the startup case
                             percentCompute = computeTime / totalTime * 100
@@ -151,6 +164,7 @@ def watchTelem():
                         # print(str(i) + ' | Timestamp: ' + str(timestamp) + ' Percent Compute: ' + str(percentCompute) + ' Compute Time: ' + str(computeTime) + ', Total Time: ' + str(totalTime))
 
                         history[i].computePercent.append(percentCompute)
+                        history[i].rate.append(rateMSPS)
                         history[i].time.append(timestamp)
                 else:
                     reading = False
@@ -222,10 +236,14 @@ def setup():
     global totalTimeMetricName
     global timestampSecName
     global timestampNSecName
+    global rateMSPSName
+    global designName
     computeTimeMetricName = telemConfig['computeTimeMetricName']
     totalTimeMetricName = telemConfig['totalTimeMetricName']
     timestampSecName = telemConfig['timestampSecName']
     timestampNSecName = telemConfig['timestampNSecName']
+    rateMSPSName = telemConfig['rateMSPSName']
+    designName = telemConfig['name']
 
     #Can parse telemetry in single thread since it looks like file readline is non-blocking if the file is not a stream (stdio or pipe)
     #Creating a new thread so it can go to sleep between updates (not shure if this is nessisary - would be if RPC server runs in this thread)
@@ -240,7 +258,8 @@ def setup():
     server.register_function(getPartitions, "getPartitions")
     server.register_function(getItter, "getItter")
     server.register_function(getComputeTimePercent, "getComputeTimePercent")
-    server.register_function(getComputeTimePercentHistory, "getComputeTimePercentHistory")
+    server.register_function(getHistory, "getHistory")
+    server.register_function(getDesignName, "getDesignName")
     server.serve_forever()
 
 if __name__ == '__main__':
