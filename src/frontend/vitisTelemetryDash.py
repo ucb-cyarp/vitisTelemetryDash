@@ -125,7 +125,7 @@ app.layout = html.Div(children=[
 
     #History Throughput Plot Container
     html.Div(className = 'container', children = [
-        html.H2(children = 'Historical Throughput:', id = 'hist-throughput'),
+        html.H2(children = 'Historical Rate:', id = 'hist-throughput'),
         html.Div(className = 'history-container', children = [
             dcc.Graph(
                 id='hist-rate-plot',
@@ -301,8 +301,7 @@ def data_update(intervals, refresh_ind, hist_window_str):
         'layout': dict(
             xaxis={'type': 'linear', 'title': 'Time',
                    'range':[minX, maxX]},
-            yaxis={'title': 'CPU Utilization'},
-            # yaxis={'title': 'CPU Utilization', 'range': [0, 100]},
+            yaxis={'title': 'Rate (MSPS)'},
             margin={'l': 40, 'b': 40, 't': 10, 'r': 10},
             legend={'x': 0, 'y': 1},
             hovermode='closest',
