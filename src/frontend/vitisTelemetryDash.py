@@ -313,4 +313,4 @@ def data_update(intervals, refresh_ind, hist_window_str):
     return tuple(gaugeCurrentVals) + tuple([new_compute_percent_fig]) + tuple([new_rate_fig]) + tuple([str(new_ind)]) #Array in tuple required to prevent string or dict from being broken apart
 
 if __name__ == '__main__':
-    app.run_server(debug=True, host='128.32.62.244')
+    app.run_server(debug=False, host='128.32.62.244')
