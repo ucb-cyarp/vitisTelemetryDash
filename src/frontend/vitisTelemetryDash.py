@@ -50,7 +50,7 @@ if radialStyle:
             showCurrentValue = True,
             units = "%",
             value = 0,
-            label = 'Compute Partition ' + str(i),
+            label = 'Compute Core ' + str(i),
             max=100,
             min=0,
             size=175
@@ -83,7 +83,7 @@ else:
         gauges.append(gauge)
 
         gaugeDiv = html.Div(className = 'bar-container', children = [
-            html.Div(className = "bar-label", children = 'Compute Partition ' + str(i) + ": "),
+            html.Div(className = "bar-label", children = 'Compute Core ' + str(i) + ": "),
             html.Div(className = "bar-actual", children = gauge)
         ])
         gaugeDivs.append(gaugeDiv)
@@ -97,7 +97,7 @@ else:
 app.layout = html.Div(children=[
     #Page Intro Container
     html.Div(className = 'container', children = [
-        html.H1(children=[ 'Vitis Application Telemetry Dashboard: ', html.Span(id = 'designName', children = designName) ]),
+        html.H1(children=[ 'Application Telemetry Dashboard: ', html.Span(id = 'designName', children = designName) ]),
         html.P(['''This dashboard presents telemetry data refreshed every ''', html.Span(id = 'refresh-lbl', children = '1'), ''' sec from a Vitis application.  
         Telemetry must be enabled and set to dump to files for this dashboard to function.'''])
     ]),
@@ -313,4 +313,5 @@ def data_update(intervals, refresh_ind, hist_window_str):
     return tuple(gaugeCurrentVals) + tuple([new_compute_percent_fig]) + tuple([new_rate_fig]) + tuple([str(new_ind)]) #Array in tuple required to prevent string or dict from being broken apart
 
 if __name__ == '__main__':
-    app.run_server(debug=False, host='128.32.62.244')
+    #app.run_server(debug=False, host='128.32.62.244')
+    app.run_server(debug=False, host='192.168.2.140')
