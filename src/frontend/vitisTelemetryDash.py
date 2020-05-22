@@ -15,6 +15,7 @@ import time
 rpcURL = 'http://localhost:8090/'
 
 connected = False
+#Need to create a new proxy connection for each thread in case 2 threads try to access the RPC server at the same time
 proxy = None
 while not connected:
     try:
@@ -39,7 +40,8 @@ designName = proxy.getDesignName()
 computePartitions = proxy.getPartitions()
 
 radialStyle = False
-if radialStyle:
+guageStyle = 2 # 0 = Radial, 1 = Bar, 2 = Pie
+if guageStyle == 0:
     #Radial Style
     for i in computePartitions:
         idName = 'gauge-part-' + str(i)
@@ -66,7 +68,7 @@ if radialStyle:
 
         gaugeContainer = html.Div(className = 'bar-collection-container', children = gaugeDivs)
 
-else:
+elif guageStyle == 1:
     #Bar Style
     for i in computePartitions:
         idName = 'gauge-part-' + str(i)
@@ -93,6 +95,50 @@ else:
         gaugeCallbackOutputs.append(Output(idName, 'value'))
 
         gaugeContainer = html.Div(className = 'gauge-container', children = gaugeDivs)
+
+else:
+    #Pie Chart Style
+    for i in computePartitions:
+        idName = 'gauge-part-' + str(i)
+
+        gauge = dcc.Graph(
+            figure = go.Figure(
+                data = [go.Pie(
+            labels=['Waiting for Input FIFOs', 
+                    'Reading Input FIFOs', 
+                    'Waiting for Compute to Finish', 
+                    'Waiting for Output FIFOs', 
+                    'Writing Output FIFOs', 
+                    'Telemetry/Misc'],
+            values=[100, 
+                    0,
+                    0,
+                    0,
+                    0,
+                    0],
+                #text=[], #This is the label for each point
+                title = 'Compute Core ' + str(computePartitions[i])
+            )]),
+            id = idName,
+            # responsive = True
+            # title = 'Compute Core ' + str(i),
+            # animate = True,
+            # config={
+            #     'showSendToCloud': False,
+            # }
+            # figure=
+        )
+
+        gauges.append(gauge)
+
+        gaugeDiv = html.Div(className = "guage-content", children = gauge)
+        gaugeDivs.append(gaugeDiv)
+
+        gaugeIDs.append(idName)
+
+        gaugeCallbackOutputs.append(Output(idName, 'figure'))
+
+        gaugeContainer = html.Div(className = 'bar-collection-container', children = gaugeDivs)
 
 app.layout = html.Div(children=[
     #Page Intro Container
@@ -147,7 +193,7 @@ app.layout = html.Div(children=[
                 daq.NumericInput(
                     id='refresh-period-input',
                     max=100,
-                    value=1,
+                    value=10,
                     min=1,
                     label='Refresh Period (s)',
                     labelPosition='bottom'
@@ -218,7 +264,17 @@ def data_update(intervals, refresh_ind, hist_window_str):
     current_ind = int(refresh_ind)
     hist_window = int(hist_window_str)
 
-    proxy_ind = proxy.getItter()
+    #Need to open another RPC connection to avoid issues if more than one update even tries to occure at once
+    threadProxy = None
+    localConnected = False
+    while not localConnected:
+        try:
+            threadProxy = xmlrpc.client.ServerProxy(rpcURL)
+            localConnected = True
+        except xmlrpc.client.ProtocolError as error:
+            time.sleep(1) #Retry in a second
+
+    proxy_ind = threadProxy.getItter()
 
     if proxy_ind == current_ind:
         #The is no new data from the backend, do not update
@@ -227,8 +283,48 @@ def data_update(intervals, refresh_ind, hist_window_str):
     new_ind = proxy_ind
 
     #Gauge Updates
-    gaugeCurrentVals = proxy.getComputeTimePercent(new_ind)
-    # print('GuageCurrentVals:' + str(gaugeCurrentVals))
+    #TODO Change to get all factors
+    gaugeCurrentVals = []
+
+    if guageStyle == 0 or guageStyle == 1:
+        gaugeCurrentVals = threadProxy.getComputeTimePercent(new_ind)
+        # print('GuageCurrentVals:' + str(gaugeCurrentVals))
+
+    else:
+        guageStructs = threadProxy.getCurrentStats(new_ind)
+        # print('GuageCurrentVals:' + str(guageStructs))
+
+        for i in range(0, len(computePartitions)):
+            # print('GuageCurrentVals [' + str(i) + ']'  + str(guageStructs[i]))
+            pieGuage = go.Pie(
+                labels=['Waiting for Input FIFOs', 
+                       'Reading Input FIFOs', 
+                       'Waiting for Compute to Finish', 
+                       'Waiting for Output FIFOs', 
+                       'Writing Output FIFOs', 
+                       'Telemetry/Misc'],
+                values=[guageStructs[i]['waitingForInputFIFOsPercent'], 
+                        guageStructs[i]['readingInputFIFOsPercent'],
+                        guageStructs[i]['computePercent'],
+                        guageStructs[i]['waitingForOutputFIFOsPercent'],
+                        guageStructs[i]['writingOutputFIFOsPercent'],
+                        guageStructs[i]['telemetryMiscPercent']],
+                #text=[], #This is the label for each point
+                title = 'Compute Core ' + str(computePartitions[i])
+            )
+
+            pieGuageFig = go.Figure(
+                data = [pieGuage],
+                # layout = dict(
+                #     # margin={'l': 40, 'b': 40, 't': 10, 'r': 10},
+                #     # legend={'x': 0, 'y': 1},
+                #     hovermode='closest'
+                #     #transition = {'duration': 500}
+                # )
+            )
+
+            gaugeCurrentVals.append(pieGuageFig)
+
 
     #History Updates
     #Using Example from https://dash.plot.ly/getting-started-part-2
@@ -240,7 +336,7 @@ def data_update(intervals, refresh_ind, hist_window_str):
     minX = 0
     maxX = 0
     for i in range(0, len(computePartitions)):
-        hist = proxy.getHistory(i, new_ind, timeRangeSec)
+        hist = threadProxy.getHistory(i, new_ind, timeRangeSec)
         x = hist['time']
         y_percent = hist['percent']
         y_rate = hist['rate']
@@ -308,6 +404,8 @@ def data_update(intervals, refresh_ind, hist_window_str):
             #transition = {'duration': 500}
         )
     }
+
+    # threadProxy.close()
 
     #Return everything
     return tuple(gaugeCurrentVals) + tuple([new_compute_percent_fig]) + tuple([new_rate_fig]) + tuple([str(new_ind)]) #Array in tuple required to prevent string or dict from being broken apart
