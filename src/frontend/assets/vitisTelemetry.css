@@ -76,6 +76,19 @@
   padding: 25px;
 }
 
+/* Pie Gauge Style
+–––––––––––––––––––––––––––––––––––––––––––––––––– */
+.pi-gauge-content{
+  flex: initial;
+  width: 450px;
+  height: 500px;
+  margin: 0;
+  padding: 25px;
+  flex-basis: 450px;
+  /* overflow: hidden; https://developer.mozilla.org/en-US/docs/Learn/CSS/Building_blocks/Overflowing_content */
+}
+
+
 /* Bar Gauge Style
 –––––––––––––––––––––––––––––––––––––––––––––––––– */
 .bar-collection-container {
