@@ -117,7 +117,9 @@ else:
                     0,
                     0],
                 #text=[], #This is the label for each point
-                title = 'Compute Core ' + str(computePartitions[i])
+            title = 'Compute Core ' + str(i),
+            sort = False,
+            textposition='inside'
             )]),
             id = idName,
             # responsive = True
@@ -310,7 +312,9 @@ def data_update(intervals, refresh_ind, hist_window_str):
                         guageStructs[i]['writingOutputFIFOsPercent'],
                         guageStructs[i]['telemetryMiscPercent']],
                 #text=[], #This is the label for each point
-                title = 'Compute Core ' + str(computePartitions[i])
+                title = 'Compute Core ' + str(computePartitions[i]),
+                sort = False,
+                textposition='inside'
             )
 
             pieGuageFig = go.Figure(
@@ -411,5 +415,4 @@ def data_update(intervals, refresh_ind, hist_window_str):
     return tuple(gaugeCurrentVals) + tuple([new_compute_percent_fig]) + tuple([new_rate_fig]) + tuple([str(new_ind)]) #Array in tuple required to prevent string or dict from being broken apart
 
 if __name__ == '__main__':
-    #app.run_server(debug=False, host='128.32.62.244')
-    app.run_server(debug=False, host='192.168.2.140')
+    app.run_server(debug=False, port=8000, host='127.0.0.1')
