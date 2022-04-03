@@ -1,5 +1,5 @@
 # vitisTelemetryDash
-A Web Based Telemetry Dashboard for Vitis Apps
+A Web Based Telemetry Dashboard for Laminar (previously Vitis) Apps
 
 ## Installation
 This application uses [Ploty Dash](https://plot.ly/dash), a python based dashboard framework.  While Dash can be run under python 2 or 3, python 3 is required for this application.
