@@ -1,5 +1,10 @@
-# vitisTelemetryDash
+# Laminar Telemetry Dashboard
 A Web Based Telemetry Dashboard for Laminar (previously Vitis) Apps
+
+## A Note on the Repository Name:
+The initial name of the Laminar compiler was *vitis*, referencing the genus of grape vines.  After the announcement of the Xilinx Vitis suite of tools, it was decided to rename the compiler to Laminar in order to avoid confusion.  This repository has retained the name *vitisTelemetryDash* to preserve versioning in repositories such as [ucb-cyarp/cyclopsDemo](https://github.com/ucb-cyarp/cyclopsDemo) which rely on it as a submodule.
+
+To clarify, there is *no relationship* between this tool and the Xilinx Vitis suite of tools.
 
 ## Installation
 This application uses [Ploty Dash](https://plot.ly/dash), a python based dashboard framework.  While Dash can be run under python 2 or 3, python 3 is required for this application.
