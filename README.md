@@ -48,3 +48,17 @@ The dashboard is separated into 2 components: the backend (which monitors the te
     python3 ./src/frontend/vitisTelemetryDash.py
     ```
 4. Connect to the dashboard using a web browser to the IP address printed to the console
+
+## Citing This Software:
+If you would like to reference this software, please cite Christopher Yarp's Ph.D. thesis.
+
+*At the time of writing, the GitHub CFF parser does not properly generate thesis citations.  Please see the bibtex entry below.*
+
+```bibtex
+@phdthesis{yarp_phd_2022,
+	title = {High Speed Software Radio on General Purpose CPUs},
+	school = {University of California, Berkeley},
+	author = {Yarp, Christopher},
+	year = {2022},
+}
+```
