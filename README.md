@@ -1,4 +1,6 @@
 # Laminar Telemetry Dashboard
+Zenodo Concept DOI: [![Concept DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.6526236.svg)](https://doi.org/10.5281/zenodo.6526236)
+
 A Web Based Telemetry Dashboard for Laminar (previously Vitis) Apps
 
 ## A Note on the Repository Name:
